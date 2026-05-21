@@ -194,7 +194,7 @@ export default function ASCIIKitPage() {
       const objectUrl = URL.createObjectURL(src);
       const img = new Image();
       img.onload = () => {
-        setImageData(scaleAndExtract(img, img.width, img.height));
+        setImageData(scaleAndExtract(img, img.naturalWidth, img.naturalHeight));
         setMediaType('image');
         URL.revokeObjectURL(objectUrl);
       };

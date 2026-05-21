@@ -249,11 +249,12 @@ export default function EffectLayout({
     }
     const img = new Image();
     img.onload = () => {
+      const w = img.naturalWidth, h = img.naturalHeight;
       const c = document.createElement('canvas');
-      c.width = img.width; c.height = img.height;
+      c.width = w; c.height = h;
       const ctx = c.getContext('2d')!;
       ctx.drawImage(img, 0, 0);
-      const data = ctx.getImageData(0, 0, img.width, img.height);
+      const data = ctx.getImageData(0, 0, w, h);
       setOriginalImage(data);
       onImageLoad(data);
       URL.revokeObjectURL(objectUrl);
@@ -274,11 +275,18 @@ export default function EffectLayout({
     const canvas = canvasRef.current;
     if (!canvas || !hasImage) return;
     const mime = { png: 'image/png', jpeg: 'image/jpeg', webp: 'image/webp' }[fmt];
-    const a = document.createElement('a');
-    a.href = canvas.toDataURL(mime, 1.0);
-    a.download = `${effectName.toLowerCase()}.${fmt}`;
-    a.click();
     setShowExport(false);
+    canvas.toBlob((blob) => {
+      if (!blob) return;
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.style.display = 'none';
+      a.href = url;
+      a.download = `${effectName.toLowerCase()}.${fmt}`;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 200);
+    }, mime, 1.0);
   };
 
   const exportGifClip = async (secs: number) => {

@@ -112,10 +112,10 @@ export default function RetromanPage() {
       const img = new Image();
       img.onload = () => {
         const c = document.createElement('canvas');
-        c.width = img.width; c.height = img.height;
+        c.width = img.naturalWidth; c.height = img.naturalHeight;
         const ctx = c.getContext('2d')!;
         ctx.drawImage(img, 0, 0);
-        setImageData(ctx.getImageData(0, 0, img.width, img.height));
+        setImageData(ctx.getImageData(0, 0, img.naturalWidth, img.naturalHeight));
         setMediaType('image');
         URL.revokeObjectURL(objectUrl);
       };
