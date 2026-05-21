@@ -177,19 +177,26 @@ export default function ASCIIKitPage() {
     else { vid.pause(); setVideoPaused(true); }
   };
 
-  const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     e.target.value = '';
 
-    if (file.type.startsWith('image/')) {
+    if (file.type.startsWith('image/') || /\.(heic|heif)$/i.test(file.name)) {
+      const isHeic = file.type === 'image/heic' || file.type === 'image/heif' || /\.(heic|heif)$/i.test(file.name);
+      let src: Blob = file;
+      if (isHeic) {
+        const heic2any = (await import('heic2any')).default;
+        src = await heic2any({ blob: file, toType: 'image/jpeg', quality: 0.92 }) as Blob;
+      }
+      const objectUrl = URL.createObjectURL(src);
       const img = new Image();
       img.onload = () => {
         setImageData(scaleAndExtract(img, img.width, img.height));
         setMediaType('image');
-        URL.revokeObjectURL(img.src);
+        URL.revokeObjectURL(objectUrl);
       };
-      img.src = URL.createObjectURL(file);
+      img.src = objectUrl;
     } else if (file.type.startsWith('video/')) {
       const vid = videoRef.current!;
       if (vid.src) URL.revokeObjectURL(vid.src);

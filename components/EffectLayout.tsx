@@ -201,11 +201,21 @@ export default function EffectLayout({
     window.addEventListener('mouseup', onUp);
   };
 
-  const processFile = useCallback((file: File) => {
+  const processFile = useCallback(async (file: File) => {
     if (file.type.startsWith('video/') && onVideoLoad) {
       onVideoLoad(file);
       setShowBeforeAfter(false);
       return;
+    }
+    const isHeic = file.type === 'image/heic' || file.type === 'image/heif'
+      || /\.(heic|heif)$/i.test(file.name);
+    let objectUrl: string;
+    if (isHeic) {
+      const heic2any = (await import('heic2any')).default;
+      const converted = await heic2any({ blob: file, toType: 'image/jpeg', quality: 0.92 }) as Blob;
+      objectUrl = URL.createObjectURL(converted);
+    } else {
+      objectUrl = URL.createObjectURL(file);
     }
     const img = new Image();
     img.onload = () => {
@@ -216,9 +226,9 @@ export default function EffectLayout({
       const data = ctx.getImageData(0, 0, img.width, img.height);
       setOriginalImage(data);
       onImageLoad(data);
-      URL.revokeObjectURL(img.src);
+      URL.revokeObjectURL(objectUrl);
     };
-    img.src = URL.createObjectURL(file);
+    img.src = objectUrl;
   }, [onImageLoad, onVideoLoad]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {

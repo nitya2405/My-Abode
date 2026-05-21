@@ -10,7 +10,14 @@ interface ImageUploaderProps {
 export function ImageUploader({ onImageUpload }: ImageUploaderProps) {
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const processFile = useCallback((file: File) => {
+  const processFile = useCallback(async (file: File) => {
+    const isHeic = file.type === 'image/heic' || file.type === 'image/heif'
+      || /\.(heic|heif)$/i.test(file.name);
+    let src: File | Blob = file;
+    if (isHeic) {
+      const heic2any = (await import('heic2any')).default;
+      src = await heic2any({ blob: file, toType: 'image/jpeg', quality: 0.92 }) as Blob;
+    }
     const reader = new FileReader();
     reader.onload = (e) => {
       const base64 = e.target?.result as string;
@@ -26,7 +33,7 @@ export function ImageUploader({ onImageUpload }: ImageUploaderProps) {
       };
       img.src = base64;
     };
-    reader.readAsDataURL(file);
+    reader.readAsDataURL(src);
   }, [onImageUpload]);
 
   const onDrop = useCallback((e: React.DragEvent) => {

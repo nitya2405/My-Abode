@@ -73,7 +73,7 @@ export default function BlurSuitePage() {
   }, [sourceMode, hasVideo, tick]);
 
   // Single upload handler — auto-detects image vs video by MIME type
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -97,6 +97,13 @@ export default function BlurSuitePage() {
         setSourceMode('video');
       };
     } else {
+      const isHeic = file.type === 'image/heic' || file.type === 'image/heif' || /\.(heic|heif)$/i.test(file.name);
+      let src: Blob = file;
+      if (isHeic) {
+        const heic2any = (await import('heic2any')).default;
+        src = await heic2any({ blob: file, toType: 'image/jpeg', quality: 0.92 }) as Blob;
+      }
+      const objectUrl = URL.createObjectURL(src);
       const img = new Image();
       img.onload = () => {
         const c   = document.createElement('canvas');
@@ -107,9 +114,9 @@ export default function BlurSuitePage() {
         cancelAnimationFrame(videoRafRef.current);
         setImageData(ctx.getImageData(0, 0, img.width, img.height));
         setSourceMode('image');
-        URL.revokeObjectURL(img.src);
+        URL.revokeObjectURL(objectUrl);
       };
-      img.src = URL.createObjectURL(file);
+      img.src = objectUrl;
     }
 
     e.target.value = '';
