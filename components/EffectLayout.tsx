@@ -107,6 +107,29 @@ const Canvas = styled.canvas<{ $visible: boolean }>`
   display: ${(p) => (p.$visible ? 'block' : 'none')};
 `;
 
+const LoadingOverlay = styled.div`
+  position: absolute;
+  inset: 0;
+  background: rgba(8,21,27,0.6);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  z-index: 10;
+  pointer-events: none;
+`;
+
+const Spinner = styled.div`
+  @keyframes _spin { to { transform: rotate(360deg); } }
+  width: 28px;
+  height: 28px;
+  border: 2px solid rgba(172,199,253,0.12);
+  border-top-color: ${C.primary};
+  border-radius: 50%;
+  animation: _spin 0.75s linear infinite;
+`;
+
 const btnStyle: React.CSSProperties = {
   flex: 1, padding: '7px 10px', background: C.surfaceHigh, color: C.primary,
   border: `1px solid ${C.border}`, borderRadius: 0, cursor: 'pointer',
@@ -140,6 +163,7 @@ export default function EffectLayout({
   const [dropdownPos, setDropdownPos] = useState({ top: 0, right: 0 });
   const [videoFormats, setVideoFormats] = useState<VideoFormat[]>([]);
   const [isDragOver, setIsDragOver] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [showBeforeAfter, setShowBeforeAfter] = useState(false);
   const [splitPos, setSplitPos] = useState(0.5);
   const [originalImage, setOriginalImage] = useState<ImageData | null>(null);
@@ -202,9 +226,11 @@ export default function EffectLayout({
   };
 
   const processFile = useCallback(async (file: File) => {
+    setIsLoading(true);
     if (file.type.startsWith('video/') && onVideoLoad) {
       onVideoLoad(file);
       setShowBeforeAfter(false);
+      setIsLoading(false);
       return;
     }
     const isHeic = file.type === 'image/heic' || file.type === 'image/heif'
@@ -231,7 +257,9 @@ export default function EffectLayout({
       setOriginalImage(data);
       onImageLoad(data);
       URL.revokeObjectURL(objectUrl);
+      setIsLoading(false);
     };
+    img.onerror = () => setIsLoading(false);
     img.src = objectUrl;
   }, [onImageLoad, onVideoLoad]);
 
@@ -286,8 +314,12 @@ export default function EffectLayout({
           <input ref={fileInputRef} type="file" accept={accept} onChange={handleFileChange} style={{ display: 'none' }} />
 
           <div style={{ display: 'flex', gap: 6, marginBottom: 6 }} onClick={(e) => e.stopPropagation()}>
-            <button onClick={() => fileInputRef.current?.click()} style={btnStyle}>
-              Upload
+            <button onClick={() => !isLoading && fileInputRef.current?.click()} style={{
+              ...btnStyle,
+              color: isLoading ? C.textMuted : C.primary,
+              cursor: isLoading ? 'wait' : 'pointer',
+            }}>
+              {isLoading ? 'Loading…' : 'Upload'}
             </button>
 
             <button onClick={handleSave} style={{
@@ -380,6 +412,15 @@ export default function EffectLayout({
         )}
 
         <Canvas ref={canvasRef} $visible={hasImage} />
+
+        {isLoading && (
+          <LoadingOverlay>
+            <Spinner />
+            <span style={{ fontFamily: '"Courier New", monospace', fontSize: 9, color: C.primary, letterSpacing: '0.2em' }}>
+              LOADING
+            </span>
+          </LoadingOverlay>
+        )}
 
         {/* Before/After overlay */}
         {showBeforeAfter && hasImage && originalImage && (
