@@ -211,9 +211,13 @@ export default function EffectLayout({
       || /\.(heic|heif)$/i.test(file.name);
     let objectUrl: string;
     if (isHeic) {
-      const heic2any = (await import('heic2any')).default;
-      const converted = await heic2any({ blob: file, toType: 'image/jpeg', quality: 0.92 }) as Blob;
-      objectUrl = URL.createObjectURL(converted);
+      try {
+        const heic2any = (await import('heic2any')).default;
+        const converted = await heic2any({ blob: file, toType: 'image/jpeg', quality: 0.92 }) as Blob;
+        objectUrl = URL.createObjectURL(converted);
+      } catch {
+        objectUrl = URL.createObjectURL(file);
+      }
     } else {
       objectUrl = URL.createObjectURL(file);
     }

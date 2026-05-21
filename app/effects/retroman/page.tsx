@@ -103,8 +103,10 @@ export default function RetromanPage() {
       const isHeic = file.type === 'image/heic' || file.type === 'image/heif' || /\.(heic|heif)$/i.test(file.name);
       let src: Blob = file;
       if (isHeic) {
-        const heic2any = (await import('heic2any')).default;
-        src = await heic2any({ blob: file, toType: 'image/jpeg', quality: 0.92 }) as Blob;
+        try {
+          const heic2any = (await import('heic2any')).default;
+          src = await heic2any({ blob: file, toType: 'image/jpeg', quality: 0.92 }) as Blob;
+        } catch { /* already browser-readable */ }
       }
       const objectUrl = URL.createObjectURL(src);
       const img = new Image();
