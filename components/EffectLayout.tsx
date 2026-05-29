@@ -355,7 +355,7 @@ export default function EffectLayout({
     if (ok) { setSavedFeedback(true); setTimeout(() => setSavedFeedback(false), 1800); }
   };
 
-  const accept = onVideoLoad ? 'image/*,video/*' : 'image/*';
+  const accept = onVideoLoad ? 'image/*,video/*,.heic,.heif' : 'image/*,.heic,.heif';
 
   return (
     <Shell onClick={() => showExport && setShowExport(false)} style={{ position: 'relative' }}>

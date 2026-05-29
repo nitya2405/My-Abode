@@ -6,6 +6,7 @@ import { renderTonekit, TonekitParams } from '@/lib/effects/tonekit';
 import { saveCanvasToGallery } from '@/lib/gallery';
 import { detectVideoFormats, startCanvasRecording, VideoFormat } from '@/lib/export';
 import { C, effects } from '@/lib/effects-data';
+import ExportDropdown from '@/components/ExportDropdown';
 
 const MAX_DIM = 1200;
 
@@ -168,11 +169,15 @@ export default function TonekitPage() {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const mime = { png: 'image/png', jpeg: 'image/jpeg', webp: 'image/webp' }[fmt];
-    const a = document.createElement('a');
-    a.href = canvas.toDataURL(mime, 0.92);
-    a.download = `tonekit.${fmt}`;
-    a.click();
     setShowExport(false);
+    canvas.toBlob((blob) => {
+      if (!blob) return;
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.style.display = 'none'; a.href = url; a.download = `tonekit.${fmt}`;
+      document.body.appendChild(a); a.click();
+      setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 200);
+    }, mime, 1.0);
   };
 
   const exportVideo = (fmt: VideoFormat, secs: number, fromStart = false) => {
@@ -215,7 +220,7 @@ export default function TonekitPage() {
 
           <div style={{ display: 'flex', gap: 6 }} onClick={(e) => e.stopPropagation()}>
             <button onClick={() => uploadRef.current?.click()} style={btnStyle}>Upload</button>
-            <input ref={uploadRef} type="file" accept="image/*,video/*" onChange={handleUpload} style={{ display: 'none' }} />
+            <input ref={uploadRef} type="file" accept="image/*,video/*,.heic,.heif" onChange={handleUpload} style={{ display: 'none' }} />
 
             <button
               onClick={handleSave}
@@ -245,21 +250,13 @@ export default function TonekitPage() {
               </button>
 
               {showExport && (
-                <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, marginTop: 4, background: '#041016', border: `1px solid ${C.border}`, borderRadius: 0, overflow: 'hidden', zIndex: 200 }}>
-                  <div style={{ padding: '6px 12px 4px', fontSize: 9, color: C.textMuted, letterSpacing: '0.12em', textTransform: 'uppercase' }}>Image frame</div>
-                  {(['PNG', 'JPEG', 'WebP'] as const).map((f) => (
-                    <button key={f} onClick={() => exportImage(f.toLowerCase() as 'png' | 'jpeg' | 'webp')} style={menuItem}>{f}</button>
-                  ))}
-                  <div style={{ borderTop: `1px solid ${C.border}`, margin: '4px 0' }} />
-                  {videoFormats.map((fmt) => (
-                    <div key={fmt.mime}>
-                      <div style={{ borderTop: `1px solid ${C.border}`, margin: '4px 0' }} />
-                      <div style={{ padding: '4px 12px 4px', fontSize: 9, color: C.textMuted, letterSpacing: '0.12em', textTransform: 'uppercase' }}>Video — {fmt.label}</div>
-                      {[5, 10, 30].map((s) => (
-                        <button key={s} onClick={() => exportVideo(fmt, s)} style={menuItem}>Clip — {s}s</button>
-                      ))}
-                    </div>
-                  ))}
+                <div style={{ position: 'absolute', top: '100%', left: 0, zIndex: 9999 }} onClick={e => e.stopPropagation()}>
+                  <ExportDropdown
+                    onImageExport={exportImage}
+                    onClipExport={exportVideo}
+                    videoFormats={videoFormats}
+                    isRecording={isRecording}
+                  />
                 </div>
               )}
             </div>

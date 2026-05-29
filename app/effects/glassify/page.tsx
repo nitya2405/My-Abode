@@ -187,11 +187,15 @@ export default function GlassifyPage() {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const mime = { png: 'image/png', jpeg: 'image/jpeg', webp: 'image/webp' }[fmt];
-    const a = document.createElement('a');
-    a.href = canvas.toDataURL(mime, 1.0);
-    a.download = `glassify.${fmt}`;
-    a.click();
     setShowExport(false);
+    canvas.toBlob((blob) => {
+      if (!blob) return;
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.style.display = 'none'; a.href = url; a.download = `glassify.${fmt}`;
+      document.body.appendChild(a); a.click();
+      setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 200);
+    }, mime, 1.0);
   };
 
   const exportVideo = (fmt: VideoFormat, secs: number, fromStart = false) => {
@@ -236,7 +240,7 @@ export default function GlassifyPage() {
 
           <div style={{ display: 'flex', gap: 6 }} onClick={(e) => e.stopPropagation()}>
             <button onClick={() => uploadRef.current?.click()} style={btnStyle}>Upload</button>
-            <input ref={uploadRef} type="file" accept="image/*,video/*" onChange={handleUpload} style={{ display: 'none' }} />
+            <input ref={uploadRef} type="file" accept="image/*,video/*,.heic,.heif" onChange={handleUpload} style={{ display: 'none' }} />
 
             <button onClick={handleSave} style={{
               ...btnStyle, flex: 'none',

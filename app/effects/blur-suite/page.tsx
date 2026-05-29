@@ -128,11 +128,15 @@ export default function BlurSuitePage() {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const mime = { png: 'image/png', jpeg: 'image/jpeg', webp: 'image/webp' }[fmt];
-    const a = document.createElement('a');
-    a.href = canvas.toDataURL(mime, 1.0);
-    a.download = `blur-suite.${fmt}`;
-    a.click();
     setShowExport(false);
+    canvas.toBlob((blob) => {
+      if (!blob) return;
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.style.display = 'none'; a.href = url; a.download = `blur-suite.${fmt}`;
+      document.body.appendChild(a); a.click();
+      setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 200);
+    }, mime, 1.0);
   };
 
   const exportVideo = (fmt: VideoFormat, secs: number) => {
@@ -196,7 +200,7 @@ export default function BlurSuitePage() {
       <input
         ref={fileInputRef}
         type="file"
-        accept="image/*,video/*"
+        accept="image/*,video/*,.heic,.heif"
         onChange={handleFileUpload}
         style={{ display: 'none' }}
       />
