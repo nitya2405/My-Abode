@@ -146,6 +146,7 @@ export default function DitherPage() {
       canvasRef={canvasRef}
       onImageLoad={setImageData}
       hasImage={!!imageData}
+      renderForExport={(fullRes) => renderDither(fullRes, params)}
     >
       {/* 01 / ALGORITHM */}
       <SectNum n="01" label="ALGORITHM" />

@@ -142,6 +142,7 @@ export default function PixelSortPage() {
       canvasRef={canvasRef}
       onImageLoad={setImageData}
       hasImage={!!imageData}
+      renderForExport={(fullRes) => renderPixelSort(fullRes, params)}
     >
       {/* 01 / DIRECTION */}
       <SectNum n="01" label="DIRECTION" />

@@ -182,6 +182,7 @@ export default function EdgeDetectionPage() {
       canvasRef={canvasRef}
       onImageLoad={setImageData}
       hasImage={!!imageData}
+      renderForExport={(fullRes) => renderEdgeDetection(fullRes, params)}
     >
       {/* 01 / ALGORITHM */}
       <SectNum n="01" label="ALGORITHM" />

@@ -201,6 +201,7 @@ export default function PixelatePage() {
       canvasRef={canvasRef}
       onImageLoad={setImageData}
       hasImage={!!imageData}
+      renderForExport={(fullRes) => renderPixelate(fullRes, params)}
     >
       {/* 01 / MODE */}
       <SectNum n="01" label="MODE" />

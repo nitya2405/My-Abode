@@ -22,6 +22,7 @@ interface EffectLayoutProps {
   isExporting?: boolean;
   exportProgress?: number;
   videoRef?: React.RefObject<HTMLVideoElement>;
+  renderForExport?: (fullRes: ImageData) => ImageData;
 }
 
 const Shell = styled.div`
@@ -130,6 +131,25 @@ const Spinner = styled.div`
   animation: _spin 0.75s linear infinite;
 `;
 
+// Cap working resolution so renders stay fast during interactive slider use.
+// Full-res is stored separately and used only at export time.
+const MAX_PREVIEW_DIM = 1280;
+
+function scaleImageData(data: ImageData, maxDim: number): ImageData {
+  const { width, height } = data;
+  if (width <= maxDim && height <= maxDim) return data;
+  const scale = maxDim / Math.max(width, height);
+  const sw = Math.round(width * scale);
+  const sh = Math.round(height * scale);
+  const src = document.createElement('canvas');
+  src.width = width; src.height = height;
+  src.getContext('2d')!.putImageData(data, 0, 0);
+  const dst = document.createElement('canvas');
+  dst.width = sw; dst.height = sh;
+  dst.getContext('2d')!.drawImage(src, 0, 0, sw, sh);
+  return dst.getContext('2d')!.getImageData(0, 0, sw, sh);
+}
+
 const btnStyle: React.CSSProperties = {
   flex: 1, padding: '7px 10px', background: C.surfaceHigh, color: C.primary,
   border: `1px solid ${C.border}`, borderRadius: 0, cursor: 'pointer',
@@ -150,6 +170,7 @@ export default function EffectLayout({
   exportProgress = 0,
   videoRef,
   animated = false,
+  renderForExport,
   children,
 }: EffectLayoutProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -164,6 +185,7 @@ export default function EffectLayout({
   const [videoFormats, setVideoFormats] = useState<VideoFormat[]>([]);
   const [isDragOver, setIsDragOver] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [fullResImage, setFullResImage] = useState<ImageData | null>(null);
   const [showBeforeAfter, setShowBeforeAfter] = useState(false);
   const [splitPos, setSplitPos] = useState(0.5);
   const [originalImage, setOriginalImage] = useState<ImageData | null>(null);
@@ -252,11 +274,12 @@ export default function EffectLayout({
       const w = img.naturalWidth, h = img.naturalHeight;
       const c = document.createElement('canvas');
       c.width = w; c.height = h;
-      const ctx = c.getContext('2d')!;
-      ctx.drawImage(img, 0, 0);
-      const data = ctx.getImageData(0, 0, w, h);
-      setOriginalImage(data);
-      onImageLoad(data);
+      c.getContext('2d')!.drawImage(img, 0, 0);
+      const fullData = c.getContext('2d')!.getImageData(0, 0, w, h);
+      const previewData = scaleImageData(fullData, MAX_PREVIEW_DIM);
+      setFullResImage(fullData);
+      setOriginalImage(previewData);
+      onImageLoad(previewData);
       URL.revokeObjectURL(objectUrl);
       setIsLoading(false);
     };
@@ -276,17 +299,39 @@ export default function EffectLayout({
     if (!canvas || !hasImage) return;
     const mime = { png: 'image/png', jpeg: 'image/jpeg', webp: 'image/webp' }[fmt];
     setShowExport(false);
-    canvas.toBlob((blob) => {
-      if (!blob) return;
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.style.display = 'none';
-      a.href = url;
-      a.download = `${effectName.toLowerCase()}.${fmt}`;
-      document.body.appendChild(a);
-      a.click();
-      setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 200);
-    }, mime, 1.0);
+
+    const blobAndDownload = (c: HTMLCanvasElement) => {
+      c.toBlob((blob) => {
+        if (!blob) return;
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        a.download = `${effectName.toLowerCase()}.${fmt}`;
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 200);
+      }, mime, 1.0);
+    };
+
+    if (renderForExport && fullResImage) {
+      // Show spinner, yield one paint cycle so it appears, then do the heavy render
+      setIsLoading(true);
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        try {
+          const rendered = renderForExport(fullResImage);
+          const tmp = document.createElement('canvas');
+          tmp.width = rendered.width;
+          tmp.height = rendered.height;
+          tmp.getContext('2d')!.putImageData(rendered, 0, 0);
+          blobAndDownload(tmp);
+        } finally {
+          setIsLoading(false);
+        }
+      }));
+    } else {
+      blobAndDownload(canvas);
+    }
   };
 
   const exportGifClip = async (secs: number) => {

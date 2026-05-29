@@ -78,6 +78,7 @@ export default function DuotonePage() {
       canvasRef={canvasRef}
       onImageLoad={setImageData}
       hasImage={!!imageData}
+      renderForExport={(fullRes) => renderDuotone(fullRes, params)}
     >
       <div style={{ height: 10 }} />
 

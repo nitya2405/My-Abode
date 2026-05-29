@@ -142,6 +142,7 @@ export default function ContourPage() {
       canvasRef={canvasRef}
       onImageLoad={setImageData}
       hasImage={!!imageData}
+      renderForExport={(fullRes) => renderContour(fullRes, params)}
     >
       {/* 01 / CONTOUR */}
       <SectNum n="01" label="CONTOUR" />
